@@ -1,7 +1,7 @@
 "use client";
 import { Authenticated } from "convex/react";
 import Header from "../../components/Header";
-import SideBar from "../../components/SideBar";
+import Sidebar from "../../components/Sidebar";
 import { NavigationProvider } from "@/lib/NavigationProvider";
 
 export default function DashboardLayout({
@@ -13,7 +13,7 @@ export default function DashboardLayout({
     <NavigationProvider>
       <div className="flex h-screen">
         <Authenticated>
-          <SideBar></SideBar>
+          <Sidebar />
         </Authenticated>
         <div className="flex-1">
           <Header />
