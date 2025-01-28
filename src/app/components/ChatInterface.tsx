@@ -3,6 +3,7 @@ import { Id, Doc } from "../../../convex/_generated/dataModel";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { ChatRequestBody } from "@/lib/types";
 interface ChatInterfaceProps {
   chatId: Id<"chats">;
   initialMessages: Doc<"messages">[];
@@ -49,6 +50,42 @@ export default function ChatInterface({
       createdAt: Date.now()
     } as Doc<"messages">;
     setMessages((prev) => [...prev, optimisticUserMessage]);
+
+    // Track complete response for saving to database
+    let fullResponse = "";
+
+    try {
+      // Prepare chat history and new message for API
+      const requestBody: ChatRequestBody = {
+        messages: messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content
+        })),
+        newMessage: trimmedInput,
+        chatId
+      };
+      // Initialize SSE connection
+      const response = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+      if (!response.body) throw new Error("No response body available");
+
+      // Handle the stream Main part
+    } catch (error) {
+      // Handle any errors during streaming
+      console.error("Error sending message:", error);
+      // Remove the optimistic user message if there was an error
+      setMessages((prev) =>
+        prev.filter((msg) => msg._id !== optimisticUserMessage._id)
+      );
+      setStreamedResponse("error");
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <main className="flex flex-col h-[calc(100vh-theme(spacing.14))]">
