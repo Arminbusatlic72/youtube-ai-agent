@@ -1,15 +1,18 @@
 "use client";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
-import { useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 interface ChatInterfaceProps {
   chatId: Id<"chats">;
-  //   initialMessages: Doc<"messages">[];
+  initialMessages: Doc<"messages">[];
 }
 
-export default function ChatInterface({ chatId }: ChatInterfaceProps) {
-  //   const [messages, setMessages] = useState<Doc<"messages">[]>(initialMessages);
+export default function ChatInterface({
+  chatId,
+  initialMessages
+}: ChatInterfaceProps) {
+  const [messages, setMessages] = useState<Doc<"messages">[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [streamedResponse, setStreamedResponse] = useState("");
@@ -17,14 +20,47 @@ export default function ChatInterface({ chatId }: ChatInterfaceProps) {
     name: string;
     input: unknown;
   } | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Function to scroll up when new message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, streamedResponse]);
+
+  const formatToolOutput = (output: unknown): string => {
+    if (typeof output === "string") return output;
+    return JSON.stringify(output, null, 2);
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedInput = input.trim();
+    if (!trimmedInput || isLoading) return;
+    // Reset UI state for new message
+    setInput("");
+    setStreamedResponse("");
+    setCurrentTool(null);
+    setIsLoading(true);
+
+    // Add user's message immediately for better UX
+    const optimisticUserMessage: Doc<"messages"> = {
+      _id: `temp_${Date.now()}`,
+      chatId,
+      content: trimmedInput,
+      role: "user",
+      createdAt: Date.now()
+    } as Doc<"messages">;
+    setMessages((prev) => [...prev, optimisticUserMessage]);
   };
   return (
     <main className="flex flex-col h-[calc(100vh-theme(spacing.14))]">
-      {/* Messages */}
       <section className="flex-1 overflow-y-auto bg-gray-50 p-2 md:p-0">
-        <div className="max-w-4xl mx-auto p-4 space-y-3"></div>
+        <div className="max-w-4xl mx-auto p-4 space-y-3">
+          {/* {messages} */}
+          {messages.map((message) => (
+            <div key={message._id}>{message.content}</div>
+          ))}
+          {/* {last message} */}
+          <div ref={messagesEndRef} />
+        </div>
       </section>
       {/* Input form */}
       <footer className="border-t bg-white p-4">

@@ -124,11 +124,11 @@
 // }
 "use client";
 
-import { NavigationContext } from "@/lib/NavigationProvider";
+import { NavigationContext } from "../lib/NavigationProvider";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/utils";
 import { use } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../components/ui/button";
 import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
