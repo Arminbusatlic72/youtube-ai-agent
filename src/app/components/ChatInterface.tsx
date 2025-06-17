@@ -31,17 +31,17 @@ export default function ChatInterface({
     if (typeof output === "string") return output;
     return JSON.stringify(output, null, 2);
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
-    // Reset UI state for new message
     setInput("");
     setStreamedResponse("");
     setCurrentTool(null);
     setIsLoading(true);
 
-    // Add user's message immediately for better UX
+    // Optimistic message (client timestamp)
     const optimisticUserMessage: Doc<"messages"> = {
       _id: `temp_${Date.now()}`,
       chatId,
@@ -51,11 +51,7 @@ export default function ChatInterface({
     } as Doc<"messages">;
     setMessages((prev) => [...prev, optimisticUserMessage]);
 
-    // Track complete response for saving to database
-    let fullResponse = "";
-
     try {
-      // Prepare chat history and new message for API
       const requestBody: ChatRequestBody = {
         messages: messages.map((msg) => ({
           role: msg.role,
@@ -64,7 +60,6 @@ export default function ChatInterface({
         newMessage: trimmedInput,
         chatId
       };
-      // Initialize SSE connection
       const response = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,11 +69,18 @@ export default function ChatInterface({
       if (!response.ok) throw new Error(await response.text());
       if (!response.body) throw new Error("No response body available");
 
-      // Handle the stream Main part
+      // Example: After receiving the real message from the server
+      // (Replace this with your actual logic for receiving the message)
+      const serverMessage: Doc<"messages"> = await response.json(); // This should include server `createdAt`
+
+      // Replace optimistic message with server message
+      setMessages((prev) =>
+        prev
+          .filter((msg) => msg._id !== optimisticUserMessage._id)
+          .concat(serverMessage)
+      );
     } catch (error) {
-      // Handle any errors during streaming
       console.error("Error sending message:", error);
-      // Remove the optimistic user message if there was an error
       setMessages((prev) =>
         prev.filter((msg) => msg._id !== optimisticUserMessage._id)
       );
@@ -87,6 +89,62 @@ export default function ChatInterface({
       setIsLoading(false);
     }
   };
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   const trimmedInput = input.trim();
+  //   if (!trimmedInput || isLoading) return;
+  //   // Reset UI state for new message
+  //   setInput("");
+  //   setStreamedResponse("");
+  //   setCurrentTool(null);
+  //   setIsLoading(true);
+
+  //   // Add user's message immediately for better UX
+  //   const optimisticUserMessage: Doc<"messages"> = {
+  //     _id: `temp_${Date.now()}`,
+  //     chatId,
+  //     content: trimmedInput,
+  //     role: "user",
+  //     createdAt: Date.now()
+  //   } as Doc<"messages">;
+  //   setMessages((prev) => [...prev, optimisticUserMessage]);
+
+  //   // Track complete response for saving to database
+  //   let fullResponse = "";
+
+  //   try {
+  //     // Prepare chat history and new message for API
+  //     const requestBody: ChatRequestBody = {
+  //       messages: messages.map((msg) => ({
+  //         role: msg.role,
+  //         content: msg.content
+  //       })),
+  //       newMessage: trimmedInput,
+  //       chatId
+  //     };
+  //     // Initialize SSE connection
+  //     const response = await fetch("/api/chat/stream", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(requestBody)
+  //     });
+
+  //     if (!response.ok) throw new Error(await response.text());
+  //     if (!response.body) throw new Error("No response body available");
+
+  //     // Handle the stream Main part
+  //   } catch (error) {
+  //     // Handle any errors during streaming
+  //     console.error("Error sending message:", error);
+  //     // Remove the optimistic user message if there was an error
+  //     setMessages((prev) =>
+  //       prev.filter((msg) => msg._id !== optimisticUserMessage._id)
+  //     );
+  //     setStreamedResponse("error");
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   return (
     <main className="flex flex-col h-[calc(100vh-theme(spacing.14))]">
       <section className="flex-1 overflow-y-auto bg-gray-50 p-2 md:p-0">
